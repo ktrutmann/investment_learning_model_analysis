@@ -1,0 +1,8 @@
+*.sublime-workspace
+*.RData
+*.RDS
+*.Rhistory
+*.pdf
+*.png
+*.jpg
+*.bmp
