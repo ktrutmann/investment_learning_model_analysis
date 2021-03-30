@@ -4,6 +4,7 @@
 library(rstan)
 library(bridgesampling)
 library(tidyverse)
+source('shorten_chains.R') # Fixes a bug in Rstan
 
 options(mc.cores = parallel::detectCores())
 Sys.setenv(LOCAL_CPPFLAGS = '-march=corei7 -mtune=corei7')
@@ -13,14 +14,15 @@ saved_objects_path <- file.path('..', 'saved_objects')
 
 rl_plus_model <- readRDS(file.path(saved_objects_path, '210127_rl_plus_main_study.RDS'))
 rl_simple_model <- readRDS(file.path(saved_objects_path, '210127_rl_simple_main_study.RDS'))
-
-
 rl_invested_model <- read_stan_csv(file.path(saved_objects_path,
-	str_c('210310_samples_rl_invested_main_study_', 1:4, '.csv')))
+	str_c('210310_samples_rl_invested_main_study_', 1:4, '.csv')))  %>%
+	shorten_chains()
 rl_returns_model <- read_stan_csv(file.path(saved_objects_path,
-	str_c('210311_rl_returns_main_study_', 1:4, '.csv')))
-rl_imoves_model <- read_stan_csv(file.path(saved_objects_path,
-	str_c('210318_rl_moves_main_study_', 1:4, '.csv')))
+	str_c('210311_rl_returns_main_study_', 1:4, '.csv')))  %>%
+	shorten_chains()
+rl_moves_model <- read_stan_csv(file.path(saved_objects_path,
+	str_c('210318_rl_moves_main_study_', 1:4, '.csv')))  %>%
+	shorten_chains()
 
 
 # Avoiding this error: https://github.com/quentingronau/bridgesampling/issues/7
@@ -42,28 +44,41 @@ returns_alpha_dummy <- stan(file = file.path('..',
 	'multi_alpha_returns_rl.stan'), data = stan_dat, chains = 0)
 
 
+lml_rl_simple <- bridge_sampler(samples = rl_simple_model,
+	stanfit_model = simple_alpha_dummy,
+	repetitions = 5, maxiter = 100, verbose = TRUE, cores = 4)
+saveRDS(lml_rl_simple, file.path(saved_objects_path, 'sms_rl_simple.RDS'))
+
+lml_rl_plus <- bridge_sampler(samples = rl_plus_model,
+	stanfit_model = multi_alpha_dummy,
+	repetitions = 5, maxiter = 100, verbose = TRUE, cores = 4)
+saveRDS(lml_rl_plus, file.path(saved_objects_path, 'sms_rl_plus.RDS'))
 
 lml_rl_invested <- bridge_sampler(samples = rl_invested_model,
 	stanfit_model = invested_alpha_dummy,
-	repetitions = 2, maxiter = 500, verbose = TRUE, cores = 4)
+	repetitions = 5, maxiter = 100, verbose = TRUE, cores = 4)
 saveRDS(lml_rl_invested, file.path(saved_objects_path, 'sms_rl_invested.RDS'))
-
-rm(lml_rl_invested)
 
 lml_rl_moves <- bridge_sampler(samples = rl_moves_model,
 	stanfit_model = moves_alpha_dummy,
 	repetitions = 5, maxiter = 1000, verbose = TRUE, cores = 4)
 saveRDS(lml_rl_moves, file.path(saved_objects_path, 'sms_rl_moves.RDS'))
-# lml_rl_moves <- readRDS(file.path(saved_objects_path, 'sms_rl_moves.RDS'))
-
-rm(lml_rl_moves)
 
 lml_rl_returns <- bridge_sampler(samples = rl_returns_model,
 	stanfit_model = returns_alpha_dummy,
 	repetitions = 5, maxiter = 1000, verbose = TRUE, cores = 4)
 saveRDS(lml_rl_returns, file.path(saved_objects_path, 'sms_rl_returns.RDS'))
 
-(bf_rl_models <- bridgesampling::bf(lml_rl_plus, lml_rl_simple))
+
+# Comparisons ------------------------------------------------------
+
+# lml_rl_simple <- readRDS(file.path(saved_objects_path, 'sms_rl_simple.RDS'))
+# lml_rl_plus <- readRDS(file.path(saved_objects_path, 'sms_rl_plus.RDS'))
+# lml_rl_invested <- readRDS(file.path(saved_objects_path, 'sms_rl_invested.RDS'))
+# lml_rl_invested <- readRDS(file.path(saved_objects_path, 'sms_rl_invested.RDS'))
+# lml_rl_moves <- readRDS(file.path(saved_objects_path, 'sms_rl_moves.RDS'))
+
+bridgesampling::bf(lml_rl_plus, lml_rl_invested)
 
 # LOO evaluation ----------------------------------------------------
 # log_lik_rl_plus <- extract_log_lik(rl_plus_model, merge_chains = FALSE)
