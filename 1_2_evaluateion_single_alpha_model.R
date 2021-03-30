@@ -5,7 +5,7 @@ theme_set(theme_minimal())
 
 rl_single_model <- readRDS(
 	file.path('..', 'data', 'saved_objects',
-		'210122_rl_simple_main_study.RDS'))
+		'210205_rl_simple_main_study_50k.RDS'))
 
 # Diagnostics -----------------------------------------------
 
@@ -32,6 +32,10 @@ model_traces %>%
 	ggplot(aes(hyper_alpha)) +
 	geom_histogram(bins = 200, fill = 'skyblue4')
 
+summary(model_traces$hyper_alpha)
+quantile(model_traces$hyper_alpha, c(.05, .95))
+
+
 ggsave('single_hyper_alpha_hist.pdf',  device = 'pdf',
   width = 10, height = 7, path = file.path('output', 'figures'))
 
@@ -41,7 +45,7 @@ model_traces %>%
 
 # Note: Alphas start at param no. 389
 rstan::extract(rl_single_model,
-	pars = names(rl_single_model@sim$samples[[1]])[c(430)],
+	pars = names(rl_single_model@sim$samples[[1]])[389:397 + 18],
 	permuted = TRUE, inc_warmup = FALSE) %>%
 	as_tibble() %>%
 	pivot_longer(cols = everything()) %>%
