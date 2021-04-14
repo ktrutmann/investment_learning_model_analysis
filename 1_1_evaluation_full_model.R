@@ -7,6 +7,7 @@
 # library(shinystan)
 # library(bayesplot)
 # library(tidybayes)
+library(ggdist)
 library(rstan)
 library(tidyverse)
 
@@ -29,10 +30,11 @@ model_traces <- rstan::extract(rl_plus_model,
 	as_tibble() %>%
 	transmute(across(everything(), pnorm))
 
-saveRDS(model_traces, file.path('..', 'data', 'saved_objects',
-		'samples_rl_plus_main_study_50k.RDS'))
+# saveRDS(model_traces, file.path('..', 'data', 'saved_objects',
+# 		'samples_rl_plus_main_study_50k.RDS'))
+model_traces <- readRDS(file.path('..', 'data', 'saved_objects',
+	'samples_rl_plus_main_study_50k.RDS'))
 
-# TODO: (1) Check for main effects
 model_traces_long <- model_traces %>%
 	pivot_longer(cols = everything()) %>%
 	transmute(context = factor(name,
@@ -114,4 +116,15 @@ group_by(model_traces_long, context) %>%
 		theme(text = element_text(size = 16))
 
 ggsave('parameter_bars.pdf',  device = 'pdf',
+  width = 10, height = 7, path = file.path('output', 'figures'))
+
+
+# Density Plots
+model_traces_long %>%
+	ggplot(aes(x = alpha_value, y = context)) +
+		ggdist::stat_halfeye(.width = .9, interval_size = 6, slab_alpha = .75) +
+		labs(x = 'Learning Rate', y = 'Density per Context') +
+		theme(text = element_text(size = 16))
+
+ggsave('parameter_densities.pdf',  device = 'pdf',
   width = 10, height = 7, path = file.path('output', 'figures'))
