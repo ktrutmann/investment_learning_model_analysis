@@ -72,13 +72,16 @@ saveRDS(lml_rl_returns, file.path(saved_objects_path, 'sms_rl_returns.RDS'))
 
 # Comparisons ------------------------------------------------------
 
-# lml_rl_simple <- readRDS(file.path(saved_objects_path, 'sms_rl_simple.RDS'))
-# lml_rl_plus <- readRDS(file.path(saved_objects_path, 'sms_rl_plus.RDS'))
-# lml_rl_invested <- readRDS(file.path(saved_objects_path, 'sms_rl_invested.RDS'))
-# lml_rl_invested <- readRDS(file.path(saved_objects_path, 'sms_rl_invested.RDS'))
-# lml_rl_moves <- readRDS(file.path(saved_objects_path, 'sms_rl_moves.RDS'))
+lml_rl_simple <- readRDS(file.path(saved_objects_path, 'sms_rl_simple.RDS'))
+lml_rl_plus <- readRDS(file.path(saved_objects_path, 'sms_rl_plus.RDS'))
+lml_rl_invested <- readRDS(file.path(saved_objects_path, 'sms_rl_invested.RDS'))
+lml_rl_returns <- readRDS(file.path(saved_objects_path, 'sms_rl_returns.RDS'))
+lml_rl_moves <- readRDS(file.path(saved_objects_path, 'sms_rl_moves.RDS'))
 
+bridgesampling::bf(lml_rl_plus, lml_rl_simple)
 bridgesampling::bf(lml_rl_plus, lml_rl_invested)
+bridgesampling::bf(lml_rl_plus, lml_rl_returns)
+bridgesampling::bf(lml_rl_plus, lml_rl_moves)
 
 # LOO evaluation ----------------------------------------------------
 # log_lik_rl_plus <- extract_log_lik(rl_plus_model, merge_chains = FALSE)
