@@ -25,11 +25,12 @@ model_traces <- rstan::extract(this_model,
 summary(model_traces)
 
 model_traces %>%
-	# transmute(alpha_diff = `hyper_alphas[1]` - `hyper_alphas[2]`) %>%
-	transmute(alpha_diff = `hyper_alphas[3]`) %>%
-	summarize(mean = mean(alpha_diff),
-		q_5 = quantile(alpha_diff, .05),
-		q_95 = quantile(alpha_diff, .95))
+	mutate(alpha_diff = `hyper_alphas[1]` - `hyper_alphas[2]`) %>%
+	pivot_longer(everything()) %>%
+	group_by(name) %>%
+	summarize(mean = mean(value),
+		qt5 = quantile(value, .05),
+		qt95 = quantile(value, .95))
 
 # Plots: ------------------------------------------------
 model_traces %>%
