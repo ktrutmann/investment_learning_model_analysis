@@ -11,7 +11,7 @@ library(ggdist)
 library(rstan)
 library(tidyverse)
 
-renv::activate() 
+renv::activate()
 theme_set(theme_minimal())
 
 rl_plus_model <- readRDS(
@@ -24,6 +24,8 @@ pairs(rl_plus_model) #, pars = names(rl_plus_model@sim$samples[[1]])[c(1, 2, 6, 
 
 
 # Get Posteriors -------------------------------------------------
+# hyper_alpha_sds to get the standard deviation estimates.
+# Also remember to remove the last line when doing so
 model_traces <- rstan::extract(rl_plus_model,
 	pars = str_c('hyper_alphas[', 1:5, ']'),
 	permuted = TRUE, inc_warmup = FALSE) %>%
@@ -48,7 +50,8 @@ group_by(model_traces_long, context) %>%
 		median = median(alpha_value),
 		quant_05 =  quantile(alpha_value, .05),
 		quant_95 =  quantile(alpha_value, .95)) %>%
-	knitr::kable()
+	mutate(across(where(is.numeric), round, 2)) %>%
+	knitr::kable(format = 'latex')
 
 # Plots: ------------------------------------------------
 model_traces %>%
@@ -122,9 +125,10 @@ ggsave('parameter_bars.pdf',  device = 'pdf',
 # Density Plots
 model_traces_long %>%
 	ggplot(aes(x = alpha_value, y = context)) +
-		ggdist::stat_halfeye(.width = .9, interval_size = 6, slab_alpha = .75) +
+		ggdist::stat_halfeye(.width = .9, interval_size = 6, slab_alpha = .75,
+			fill = '#A4D6D1') +
 		labs(x = 'Learning Rate', y = 'Density per Context') +
 		theme(text = element_text(size = 16))
 
-ggsave('parameter_densities.pdf',  device = 'pdf',
+ggsave('parameter_densities_col.pdf',  device = 'pdf',
   width = 10, height = 7, path = file.path('output', 'figures'))

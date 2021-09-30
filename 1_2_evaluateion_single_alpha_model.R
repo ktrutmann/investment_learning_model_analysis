@@ -27,6 +27,16 @@ model_traces <- rstan::extract(rl_single_model,
 	as_tibble() %>%
 	mutate(hyper_alpha = pnorm(hyper_alpha))
 
+	model_traces %>%
+		pivot_longer(everything()) %>%
+		group_by(name) %>%
+		summarize(mean = mean(value),
+			qt5 = quantile(value, .05),
+			qt95 = quantile(value, .95))
+
+
+	summarize(across(everything(), list(mean, sd)))
+
 # Plots: ------------------------------------------------
 model_traces %>%
 	ggplot(aes(hyper_alpha)) +

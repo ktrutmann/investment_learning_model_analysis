@@ -5,9 +5,9 @@ theme_set(theme_minimal())
 
 this_model <- readRDS(
 	file.path('..', 'data', 'saved_objects',
-		'210311_rl_invested_main_study.RDS'))
+		# '210416_rl_invested_main_study.RDS'))
 		# '210312_rl_returns_main_study.RDS'))
-		# '210320_rl_moves_main_study.RDS'))
+		'210320_rl_moves_main_study.RDS'))
 
 # Diagnostics -----------------------------------------------
 
@@ -17,7 +17,7 @@ pairs(this_model, pars = names(this_model@sim$samples[[1]])[
 
 # Get Posteriors -------------------------------------------------
 model_traces <- rstan::extract(this_model,
-	pars = str_c('hyper_alphas[', 1:2, ']'),
+	pars = str_c('hyper_alphas[', 1:3, ']'),
 	permuted = TRUE, inc_warmup = FALSE) %>%
 	as_tibble() %>%
 	transmute(across(everything(), pnorm))
@@ -25,8 +25,10 @@ model_traces <- rstan::extract(this_model,
 summary(model_traces)
 
 model_traces %>%
-	transmute(alpha_diff = `hyper_alphas[1]` - `hyper_alphas[2]`) %>%
-	summarize(q_5 = quantile(alpha_diff, .05),
+	# transmute(alpha_diff = `hyper_alphas[1]` - `hyper_alphas[2]`) %>%
+	transmute(alpha_diff = `hyper_alphas[3]`) %>%
+	summarize(mean = mean(alpha_diff),
+		q_5 = quantile(alpha_diff, .05),
 		q_95 = quantile(alpha_diff, .95))
 
 # Plots: ------------------------------------------------
