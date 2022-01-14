@@ -123,12 +123,18 @@ ggsave('parameter_bars.pdf',  device = 'pdf',
 
 
 # Density Plots
+
+
 model_traces_long %>%
 	ggplot(aes(x = alpha_value, y = context)) +
 		ggdist::stat_halfeye(.width = .9, interval_size = 6, slab_alpha = .75,
-			fill = '#A4D6D1') +
+			# fill = '#A4D6D1') +
+			fill = 'darkgrey') +
 		labs(x = 'Learning Rate', y = 'Density per Context') +
-		theme(text = element_text(size = 16))
+		scale_y_discrete(labels =
+c('Not\nInvested', 'Favorable\nGain', 'Favorable\nLoss', 'Unfavorable\nGain', 'Unfavorable\nLoss')) +
+		theme(text = element_text(size = 16),
+			axis.text.y = element_text(vjust = -1, hjust = .5))
 
-ggsave('parameter_densities_col.pdf',  device = 'pdf',
+ggsave('parameter_densities.pdf',  device = 'pdf',
   width = 10, height = 7, path = file.path('output', 'figures'))
