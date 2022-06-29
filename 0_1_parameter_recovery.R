@@ -4,21 +4,28 @@ library(tidyverse)
 theme_set(theme_minimal())
 
 # Get the original data to get the true parameters
-dat_long <- read_delim(file.path('..', 'Data',
-	'Clean', 'all_participants_long_main_param_recov.csv'),
+dat_long <- read_delim(file.path('..', 'data',
+	'clean', 'all_participants_long_main_param_recov.csv'),
 	delim = ';')
 
 # Get the samples from the model fitting:
-fit_dat <- readRDS(
-	file.path('..', 'Data', 'saved_objects', 'param_recov',
-		'220609_cut_down_param_recov.rds'))
+my_samples <- readRDS(
+	file.path('..', 'data', 'saved_objects', 'param_recov',
+		'220617_rl_plus_param_recov_alpha_samples.RDS'))
 
-my_samples <- rstan::extract(fit_dat)
-
+# Hyperparameters
+attr(my_samples$hyper_alphas, 'dimnames') <- list(
+	iterations = NULL,
+	parameters = c('not_inv', 'fav_gain', 'unfav_gain', 'fav_loss', 'unfav_loss'))
+hyper_alphas <- as_tibble(my_samples$hyper_alphas) %>%
+	mutate(across(.fns = pnorm))
+	
+# Individual parameters
 individual_alphas <- apply(my_samples$alphas, c(2:3), median)
 dimnames(individual_alphas)[[2]] <- str_c('alpha_',
 	c('not_inv', 'fav_gain', 'unfav_gain', 'fav_loss', 'unfav_loss'))
-individual_alphas <- as_tibble(individual_alphas)
+individual_alphas <- as_tibble(individual_alphas) %>%
+	mutate(across(.fns = pnorm)) # TODO: (1) Reconstruct alpha! These are "raw"!
 individual_alphas$participant_code <- unique(dat_long$participant_code)
 
 # Building a dataset:
@@ -37,7 +44,7 @@ ggplot(full_dat,
 	geom_point() +
 	geom_abline(slope = 1, intercept = 0)
 
-# fav gain: WAT?
+# fav gain:
 cor.test(full_dat$alpha_altered, full_dat$alpha_fav_gain)
 
 ggplot(full_dat,
@@ -71,14 +78,6 @@ ggplot(full_dat,
 
 
 # Hyperparameters:
-hyper_alphas <- as_tibble(my_samples$hyper_alpha) %>%
-	rename(not_inv = V1, fav_gain = V2, unfav_gain = V3,
-		fav_loss = V4, unfav_loss = V5) %>%
-	mutate(across(.fns = pnorm))
-	
-ggplot(pivot_longer(hyper_alphas, everything()),
-	aes(value, fill = name)) +
-	geom_density(alpha = .5)
 
 hyper_alphas %>%
 	pivot_longer(everything()) %>%
@@ -93,3 +92,15 @@ full_dat %>%
 	names_to = 'param', values_to = 'alpha_value') %>%
 	ggplot(aes(alpha_value, fill = param)) +
 		geom_density(alpha = .6)
+
+
+# Find out what's wrong with fav loss...
+dat_long <- dat_long %>%
+	mutate(updated_from = paste(position_end_of_last_period,
+		price_move_from_last_corrected),
+		updated_from = case_when(
+			str_detect(updated_from, 'NA') ~ NA_character_,
+			str_detect(updated_from, 'No') ~ 'Not Invested',
+			TRUE ~ updated_from))
+
+count(dat_long, updated_from) # It's not a lack of cases...
