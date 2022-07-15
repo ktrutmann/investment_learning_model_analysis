@@ -2,6 +2,7 @@ library(rstan)
 library(tidyverse)
 library(GGally)
 library(ggdist)
+library(patchwork)
 
 theme_set(theme_minimal())
 
@@ -39,45 +40,80 @@ full_dat <- dat_long %>%
 		alpha_altered = .15 + alpha_shift) %>%
 	full_join(individual_alphas, by = 'participant_code')
 
+
+# Individual Recoveries ----
 # Not inv:
 cor.test(full_dat$alpha_unaltered, full_dat$alpha_not_inv)
+this_cor <- cor(full_dat$alpha_unaltered, full_dat$alpha_not_inv) %>%
+	round(3) %>%
+	str_replace('0.', '.')
 
-ggplot(full_dat,
+scatter_not_inv <- ggplot(full_dat,
 	aes(alpha_unaltered, alpha_not_inv)) +
 	geom_point() +
-	geom_abline(slope = 1, intercept = 0)
+	geom_abline(slope = 1, intercept = 0) +
+	annotate('text', x = .16, y = .215, label = str_c('r =', this_cor), size = 6) +
+	labs(title = 'Not Invested', x = 'True Value', y = 'Recovered Value')
 
 # fav gain:
 cor.test(full_dat$alpha_altered, full_dat$alpha_fav_gain)
+this_cor <- cor(full_dat$alpha_altered, full_dat$alpha_fav_gain) %>%
+	round(3) %>%
+	str_replace('0.', '.')
 
-ggplot(full_dat,
+scatter_fav_gain <- ggplot(full_dat,
 	aes(alpha_altered, alpha_fav_gain)) +
 	geom_point() +
-	geom_abline(slope = 1, intercept = 0)
+	geom_abline(slope = 1, intercept = 0) +
+	annotate('text', x = .11, y = .16, label = str_c('r =', this_cor), size = 6) +
+	labs(title = 'Gain Favorable', x = 'True Value', y = 'Recovered Value')
 
 # fav loss:
 cor.test(full_dat$alpha_unaltered, full_dat$alpha_fav_loss)
+this_cor <- cor(full_dat$alpha_unaltered, full_dat$alpha_fav_loss) %>%
+	round(3) %>%
+	str_replace('0.', '.')
 
-ggplot(full_dat,
+scatter_fav_loss <- ggplot(full_dat,
 	aes(alpha_unaltered, alpha_fav_loss)) +
 	geom_point() +
-	geom_abline(slope = 1, intercept = 0)
+	geom_abline(slope = 1, intercept = 0) +
+	annotate('text', x = .16, y = .212, label = str_c('r =', this_cor), size = 6) +
+	labs(title = 'Loss Favorable', x = 'True Value', y = 'Recovered Value')
 
 # unfav gain:
 cor.test(full_dat$alpha_unaltered, full_dat$alpha_unfav_gain)
+this_cor <- cor(full_dat$alpha_unaltered, full_dat$alpha_unfav_gain) %>%
+	round(3) %>%
+	str_replace('0.', '.')
 
-ggplot(full_dat,
+scatter_unfav_gain <- ggplot(full_dat,
 	aes(alpha_unaltered, alpha_unfav_gain)) +
 	geom_point() +
-	geom_abline(slope = 1, intercept = 0)
+	geom_abline(slope = 1, intercept = 0) +
+	annotate('text', x = .16, y = .21, label = str_c('r =', this_cor), size = 6) +
+	labs(title = 'Gain Unfavorable', x = 'True Value', y = 'Recovered Value')
 
 # unfav loss:
 cor.test(full_dat$alpha_altered, full_dat$alpha_unfav_loss)
+this_cor <- cor(full_dat$alpha_altered, full_dat$alpha_unfav_loss) %>%
+	round(3) %>%
+	str_replace('0.', '.')
 
-ggplot(full_dat,
+scatter_unfav_loss <- ggplot(full_dat,
 	aes(alpha_altered, alpha_unfav_loss)) +
 	geom_point() +
-	geom_abline(slope = 1, intercept = 0)
+	geom_abline(slope = 1, intercept = 0) +
+	annotate('text', x = .11, y = .18, label = str_c('r =', this_cor), size = 6) +
+	labs(title = 'Loss Unfavorable', x = 'True Value', y = 'Recovered Value')
+
+scatter_not_inv + scatter_fav_gain + scatter_unfav_gain +
+scatter_fav_loss + scatter_unfav_loss +
+plot_layout(design = "AABBCC
+					  #DDEE#")
+
+ggsave(file.path('..', 'output', 'param_recov_individual_scatter.pdf'),
+	width = 25, height = 15, units = 'cm')
 
 
 # Distributions of individual estimates:
@@ -89,7 +125,6 @@ full_dat %>%
 
 
 # Hyperparameters: ---------------------
-
 hyper_alphas %>%
 	pivot_longer(everything()) %>%
 	group_by(name) %>%
@@ -106,6 +141,28 @@ hyper_alphas %>%
 		geom_density(alpha = .5) +
 		geom_vline(xintercept = .2) +
 		geom_vline(xintercept = .15)
+
+# Separate hyper-parameters density plots:
+hyper_alphas %>%
+	pivot_longer(everything()) %>%
+	mutate(true_val = if_else(
+		name %in% c('alpha_fav_gain', 'alpha_unfav_loss'), .15, .2)) %>%
+	ggplot(aes(value)) +
+		facet_wrap('name', scale = 'free_x', switch = 'x',
+			labeller = as_labeller(c(
+				'alpha_not_inv' = 'Not Invested',
+				'alpha_unfav_loss' = 'Loss Unfavorable',
+				'alpha_fav_loss' = 'Loss Favorable',
+				'alpha_unfav_gain' = 'Gain Unfavorable',
+				'alpha_fav_gain' = 'Gain Favorable'))) +
+		stat_halfeye() +
+		geom_vline(aes(xintercept = true_val)) +
+		labs(x = 'Recovered Learning Rates', y = 'Posterior Probability Density') +
+		theme(panel.spacing.x = unit(1, 'lines'))
+
+ggsave(file.path('..', 'output', 'param_recov_hyper_alpha_dens.pdf'),
+	width = 20, height = 12, units = 'cm')
+
 
 ggpairs(hyper_alphas) # Checking out the correlations
 
